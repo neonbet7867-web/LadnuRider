@@ -3,98 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ladnu Rider | Bidasar-Ladnu Local Cab</title>
+    <title>Ladnu Rider | Professional Cab Service</title>
     
-    <!-- Map & Icons -->
+    <!-- Map Libraries -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        :root { --primary: #FFD700; --dark: #1a1a1a; --success: #27ae60; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        :root { --primary: #FFD700; --dark: #121212; --success: #27ae60; --blue: #3498db; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Ubuntu', sans-serif; }
         
-        body { background: #f0f2f5; overflow: hidden; }
+        body { background: #f4f4f4; overflow: hidden; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
 
-        /* Modern Top Header Logo */
+        /* Header Logo */
         header {
             position: absolute; top: 0; width: 100%;
-            background: white; padding: 12px 20px;
+            background: white; padding: 10px 20px;
             display: flex; justify-content: space-between; align-items: center;
-            z-index: 2000; box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            z-index: 2000; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
+        .logo { font-weight: 800; font-size: 1.4rem; color: var(--dark); }
+        .logo span { background: var(--primary); padding: 0 8px; border-radius: 4px; }
 
-        .logo { font-weight: 800; font-size: 1.3rem; color: var(--dark); letter-spacing: -0.5px; }
-        .logo span { background: var(--primary); padding: 2px 8px; border-radius: 6px; color: #000; }
-        .city-badge { font-size: 10px; font-weight: 600; background: #eee; padding: 3px 8px; border-radius: 20px; color: #666; }
-
-        /* Center Pin */
-        .center-pin {
+        /* Center Marker for Pickup */
+        .pickup-marker {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -100%);
-            z-index: 1001; pointer-events: none; margin-top: -20px;
+            z-index: 1000; pointer-events: none; margin-top: -15px;
         }
 
-        /* Booking Sheet */
-        .bottom-sheet {
+        /* Bottom UI Panel */
+        .ui-panel {
             position: absolute; bottom: 0; width: 100%;
             background: white; border-radius: 25px 25px 0 0;
-            padding: 20px; z-index: 1500; box-shadow: 0 -8px 25px rgba(0,0,0,0.15);
+            padding: 20px; z-index: 1500; box-shadow: 0 -5px 25px rgba(0,0,0,0.2);
+            max-height: 80vh; overflow-y: auto;
         }
 
-        .input-group { margin-bottom: 12px; position: relative; }
+        .search-area { margin-bottom: 15px; }
         .input-box {
-            background: #f1f3f4; padding: 14px; border-radius: 12px;
-            display: flex; align-items: center; border: 1px solid #e0e0e0;
+            background: #f1f3f4; padding: 12px; border-radius: 12px;
+            display: flex; align-items: center; border: 1.5px solid #eee; margin-bottom: 10px;
         }
         .input-box input {
             border: none; background: transparent; width: 100%;
             outline: none; font-size: 14px; margin-left: 10px; font-weight: 500;
         }
 
-        /* Suggestions Dropdown */
+        /* Suggestions Box */
         .suggestions {
-            position: absolute; bottom: 100%; left: 0; width: 100%;
-            background: white; border-radius: 15px; max-height: 200px;
-            overflow-y: auto; box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
-            display: none; z-index: 1600; border: 1px solid #eee; margin-bottom: 5px;
+            position: absolute; width: 85%; background: white;
+            border-radius: 10px; max-height: 180px; overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; z-index: 1600;
         }
-        .suggestion-item {
-            padding: 12px 15px; border-bottom: 1px solid #f9f9f9;
+        .suggest-item {
+            padding: 12px; border-bottom: 1px solid #f1f1f1;
             cursor: pointer; display: flex; align-items: center;
         }
-        .suggestion-item i { color: #888; margin-right: 12px; }
 
-        /* Vehicle Cards */
-        .vehicle-selection { display: flex; gap: 12px; margin: 15px 0; }
+        /* Price Cards */
+        .price-section { display: flex; gap: 10px; margin: 15px 0; }
         .v-card {
-            flex: 1; border: 2.5px solid #eee; border-radius: 18px;
-            padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s;
+            flex: 1; border: 2px solid #eee; border-radius: 15px;
+            padding: 12px; text-align: center; cursor: pointer; transition: 0.3s;
         }
-        .v-card.active { border-color: var(--primary); background: #fffdf0; transform: scale(1.02); }
-        .v-card i { font-size: 26px; margin-bottom: 6px; display: block; color: var(--dark); }
-        .v-card .price { display: block; color: var(--success); font-weight: 800; font-size: 18px; }
-        .v-card .rate { font-size: 10px; color: #888; font-weight: 500; }
+        .v-card.active { border-color: var(--primary); background: #fffdf0; }
+        .v-card i { font-size: 24px; margin-bottom: 5px; display: block; }
+        .v-card .p-val { font-size: 1.1rem; font-weight: 700; color: var(--success); }
+        .v-card .p-rate { font-size: 9px; color: #777; font-weight: 600; }
+
+        .info-bar {
+            background: #e1f5fe; color: #0277bd; padding: 8px;
+            border-radius: 8px; font-size: 12px; font-weight: 600;
+            text-align: center; margin-bottom: 15px; display: none;
+        }
 
         .btn-confirm {
             width: 100%; background: var(--dark); color: var(--primary);
-            border: none; padding: 18px; border-radius: 16px;
-            font-weight: 700; font-size: 16px; letter-spacing: 0.5px;
+            border: none; padding: 16px; border-radius: 12px;
+            font-weight: 700; font-size: 16px;
         }
 
         .gps-btn {
-            position: absolute; right: 20px; top: -75px;
-            background: white; width: 52px; height: 52px;
+            position: absolute; right: 20px; top: -70px;
+            background: white; width: 50px; height: 50px;
             border-radius: 50%; display: flex; align-items: center;
             justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            color: #2e86de; z-index: 1500;
-        }
-
-        .dist-badge {
-            background: #e8f5e9; color: #2e7d32; padding: 4px 12px;
-            border-radius: 20px; font-size: 11px; font-weight: 700;
-            display: inline-block; margin-bottom: 8px;
+            color: var(--blue); z-index: 1001;
         }
     </style>
 </head>
@@ -102,157 +100,168 @@
 
     <header>
         <div class="logo">LADNU <span>RIDER</span></div>
-        <div class="city-badge">Bidasar - Ladnu Service</div>
+        <div style="font-size: 12px; font-weight: 600; color: #666;">341306 Service</div>
     </header>
 
-    <div class="center-pin">
-        <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" width="45">
+    <!-- Map & Pickup Pointer -->
+    <div class="pickup-marker" id="pMarker">
+        <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" width="40">
     </div>
 
     <div id="map"></div>
 
-    <div class="bottom-sheet">
-        <div class="gps-btn" onclick="autoLocate()"><i class="fa-solid fa-location-crosshairs fa-lg"></i></div>
+    <div class="ui-panel">
+        <div class="gps-btn" onclick="autoLocate()"><i class="fa-solid fa-crosshairs fa-lg"></i></div>
 
-        <div class="input-group">
+        <div class="search-area">
             <div class="input-box">
                 <i class="fa-solid fa-circle" style="color: var(--success); font-size: 8px;"></i>
-                <input type="text" id="pickupAddr" placeholder="Aapki Gali/Area dhoondh rahe hain..." readonly>
+                <input type="text" id="pickAddr" placeholder="Aapki location dhoondh rahe hain..." readonly>
+            </div>
+            <div style="position: relative;">
+                <div class="input-box">
+                    <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
+                    <input type="text" id="destAddr" placeholder="Kahan jana hai? (Market, Station...)" oninput="searchDest(this.value)">
+                </div>
+                <div class="suggestions" id="suggestBox"></div>
             </div>
         </div>
 
-        <div class="input-group">
-            <div class="input-box">
-                <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
-                <input type="text" id="destInput" placeholder="Kahan jana hai? (Station, Market...)" oninput="handleSearch(this.value)">
-            </div>
-            <div class="suggestions" id="suggestionBox"></div>
-        </div>
+        <div class="info-bar" id="routeInfo">Rasta dhoondha ja raha hai...</div>
 
-        <div style="text-align: center;">
-            <div class="dist-badge" id="distDisplay">Destination select karein</div>
-        </div>
-
-        <div class="vehicle-selection">
-            <div class="v-card active" id="bike" onclick="selectVeh('bike')">
+        <div class="price-section">
+            <div class="v-card active" id="bike" onclick="selectType('bike')">
                 <i class="fa-solid fa-motorcycle"></i>
-                <span style="font-size: 12px; font-weight: 600;">BIKE</span>
-                <span class="price" id="bPrice">₹--</span>
-                <span class="rate">₹6/km</span>
+                <span style="font-size: 11px; font-weight: 700;">BIKE</span>
+                <div class="p-val" id="bPrice">₹--</div>
+                <div class="p-rate">₹6 / KM</div>
             </div>
-            <div class="v-card" id="car" onclick="selectVeh('car')">
+            <div class="v-card" id="car" onclick="selectType('car')">
                 <i class="fa-solid fa-car"></i>
-                <span style="font-size: 12px; font-weight: 600;">CAR</span>
-                <span class="price" id="cPrice">₹--</span>
-                <span class="rate">₹15/km</span>
+                <span style="font-size: 11px; font-weight: 700;">CAR</span>
+                <div class="p-val" id="cPrice">₹--</div>
+                <div class="p-rate">₹15 / KM</div>
             </div>
         </div>
 
-        <button class="btn-confirm" onclick="finalStep()">CONFIRM BOOKING</button>
+        <button class="btn-confirm" onclick="finalBook()">CONFIRM BOOKING</button>
     </div>
 
+    <!-- Map & Routing Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
     <script>
-        // Local Famous Places Database
-        const places = [
+        // Database for Local Locations (Coordinates included)
+        const localPlaces = [
             { name: "Jain Vishva Bharati University", city: "Ladnu", lat: 27.6521, lng: 74.3920 },
             { name: "Ladnu Railway Station", city: "Ladnu", lat: 27.6582, lng: 74.3854 },
-            { name: "Umarami Chowk", city: "Ladnu", lat: 27.6534, lng: 74.3892 },
             { name: "Ladnu Bus Stand", city: "Ladnu", lat: 27.6492, lng: 74.3888 },
+            { name: "Umarami Chowk", city: "Ladnu", lat: 27.6534, lng: 74.3892 },
             { name: "Chordiya Chowk", city: "Bidasar", lat: 27.6186, lng: 74.3168 },
             { name: "Bidasar Bus Stand", city: "Bidasar", lat: 27.6201, lng: 74.3180 },
             { name: "Main Market", city: "Bidasar", lat: 27.6190, lng: 74.3160 },
-            { name: "Railway Crossing", city: "Ladnu", lat: 27.6590, lng: 74.3860 }
+            { name: "Phulera Stand", city: "Ladnu", lat: 27.6450, lng: 74.3910 }
         ];
 
         var map = L.map('map', { zoomControl: false }).setView([27.6534, 74.3892], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
-        let userLat, userLng;
+        var control; // For routing
+        let currentLat, currentLng;
 
+        // 1. Auto Location on Start
         function autoLocate() {
             map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true});
         }
 
         map.on('locationfound', function(e) {
-            userLat = e.latlng.lat; userLng = e.latlng.lng;
-            updateLocationLabel(userLat, userLng);
+            currentLat = e.latlng.lat; currentLng = e.latlng.lng;
+            updatePickAddress(currentLat, currentLng);
         });
 
         map.on('locationerror', function() {
-            // Default center of Ladnu
-            userLat = 27.6534; userLng = 74.3892;
-            updateLocationLabel(userLat, userLng);
+            currentLat = 27.6534; currentLng = 74.3892; // Default Ladnu
+            updatePickAddress(currentLat, currentLng);
         });
 
         map.on('moveend', function() {
-            let c = map.getCenter();
-            userLat = c.lat; userLng = c.lng;
-            updateLocationLabel(userLat, userLng);
+            let center = map.getCenter();
+            currentLat = center.lat; currentLng = center.lng;
+            updatePickAddress(currentLat, currentLng);
         });
 
-        // Detailed Address Fetcher (Gali/Colony name)
-        function updateLocationLabel(lat, lng) {
-            document.getElementById('pickupAddr').value = "Locating...";
+        function updatePickAddress(lat, lng) {
             fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
                 .then(res => res.json())
                 .then(data => {
                     let a = data.address;
-                    // More detailed address logic
-                    let neighborhood = a.neighbourhood || a.suburb || a.road || a.village || a.town || "Ladnu/Bidasar";
-                    let city = a.city || a.town || "Rajasthan";
-                    document.getElementById('pickupAddr').value = neighborhood + ", " + city;
+                    let local = a.neighbourhood || a.road || a.suburb || a.village || "Ladnu/Bidasar";
+                    document.getElementById('pickAddr').value = local + ", " + (a.city || a.town || "RJ");
                 });
         }
 
-        function handleSearch(q) {
-            let box = document.getElementById('suggestionBox');
+        // 2. Autocomplete Destination Search
+        function searchDest(q) {
+            let box = document.getElementById('suggestBox');
             box.innerHTML = "";
             if(q.length < 1) { box.style.display="none"; return; }
             
-            let matches = places.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
-            if(matches.length > 0) {
+            let filtered = localPlaces.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+            if(filtered.length > 0) {
                 box.style.display="block";
-                matches.forEach(p => {
-                    let d = document.createElement('div');
-                    d.className="suggestion-item";
-                    d.innerHTML = `<i class="fa-solid fa-location-arrow"></i> <div><strong>${p.name}</strong><br><small style="color:#999">${p.city}</small></div>`;
-                    d.onclick = () => {
-                        document.getElementById('destInput').value = p.name;
-                        box.style.display="none";
-                        calculatePrice(p.lat, p.lng);
+                filtered.forEach(p => {
+                    let div = document.createElement('div');
+                    div.className = "suggest-item";
+                    div.innerHTML = `<i class="fa-solid fa-clock-rotate-left" style="color:#aaa; margin-right:10px;"></i> 
+                                     <div><strong>${p.name}</strong><br><small style="color:#999">${p.city}</small></div>`;
+                    div.onclick = () => {
+                        document.getElementById('destAddr').value = p.name;
+                        box.style.display = "none";
+                        getRoadDistance(p.lat, p.lng);
                     };
-                    box.appendChild(d);
+                    box.appendChild(div);
                 });
             }
         }
 
-        // New Pricing Logic: Bike ₹6/km, Car ₹15/km
-        function calculatePrice(dLat, dLng) {
-            const R = 6371;
-            const dy = (dLat - userLat) * Math.PI/180;
-            const dx = (dLng - userLng) * Math.PI/180;
-            const a = Math.sin(dy/2)**2 + Math.cos(userLat*Math.PI/180)*Math.cos(dLat*Math.PI/180)*Math.sin(dx/2)**2;
-            const dist = (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * R).toFixed(1);
+        // 3. Perfect Road Tracking & Distance Logic
+        function getRoadDistance(destLat, destLng) {
+            document.getElementById('routeInfo').style.display = "block";
+            document.getElementById('pMarker').style.display = "none"; // Hide pickup pointer
 
-            document.getElementById('distDisplay').innerText = `Doori: ${dist} KM`;
+            if (control) map.removeControl(control);
 
-            // Final Pricing (Base Price ₹10 for Bike, ₹40 for Car to be realistic)
-            let bPrice = Math.round(10 + (dist * 6));
-            let cPrice = Math.round(40 + (dist * 15));
+            control = L.Routing.control({
+                waypoints: [
+                    L.latLng(currentLat, currentLng),
+                    L.latLng(destLat, destLng)
+                ],
+                lineOptions: { styles: [{ color: '#3498db', weight: 6 }] },
+                createMarker: function() { return null; }, // Remove default routing markers
+                addWaypoints: false,
+                routeWhileDragging: false
+            }).addTo(map);
 
-            document.getElementById('bPrice').innerText = '₹' + bPrice;
-            document.getElementById('cPrice').innerText = '₹' + cPrice;
+            control.on('routesfound', function(e) {
+                let routes = e.routes;
+                let summary = routes[0].summary;
+                let km = (summary.totalDistance / 1000).toFixed(1); // Asli Road Distance in KM
+
+                document.getElementById('routeInfo').innerText = `Asli Rasta Mil Gaya: ${km} KM Door Hai`;
+
+                // Prices: Bike ₹6/km, Car ₹15/km
+                let bikeFinal = Math.round(15 + (km * 6)); // 15 base
+                let carFinal = Math.round(50 + (km * 15)); // 50 base
+
+                document.getElementById('bPrice').innerText = '₹' + bikeFinal;
+                document.getElementById('cPrice').innerText = '₹' + carFinal;
+            });
         }
 
-        function selectVeh(t) {
-            document.querySelectorAll('.v-card').forEach(v => v.classList.remove('active'));
-            document.getElementById(t).classList.add('active');
-        }
-
-        function finalStep() {
-            if(!document.getElementById('destInput').value) return alert("Kahan jana hai wo batayein!");
-            alert("Rider dhoondha ja raha hai... Ladnu Rider aapki seva mein hazir hai!");
+        function finalBook() {
+            if(!document.getElementById('destAddr').value) return alert("Destination select karein!");
+            alert("Rider Assigned! Ladnu Rider aapke raste par hai.");
         }
 
         window.onload = autoLocate;
