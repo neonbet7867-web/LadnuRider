@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ladnu Rider | Bidasar-Ladnu Live Cab</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root { --primary: #FFD700; --dark: #121212; --soft-bg: #f4f7f6; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body { background: var(--soft-bg); overflow: hidden; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+
+        /* Floating Pin in Center */
+        .center-pin {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -100%);
+            z-index: 10; pointer-events: none; margin-top: -30px;
+        }
+
+        /* UI Panel */
+        .bottom-sheet {
+            position: absolute; bottom: 0; width: 100%;
+            background: white; border-radius: 30px 30px 0 0;
+            padding: 20px; z-index: 1000; box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+        }
+
+        .input-container { position: relative; margin-bottom: 12px; }
+        
+        .input-box {
+            background: #f1f3f4; padding: 14px; border-radius: 12px;
+            display: flex; align-items: center; border: 1px solid #ddd;
+        }
+
+        .input-box input {
+            border: none; background: transparent; width: 100%;
+            outline: none; font-size: 14px; margin-left: 10px; font-weight: 500;
+        }
+
+        /* Autocomplete Suggestions Box */
+        .suggestions {
+            position: absolute; bottom: 100%; left: 0; width: 100%;
+            background: white; border-radius: 12px; max-height: 200px;
+            overflow-y: auto; box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            display: none; z-index: 1100; border: 1px solid #eee;
+        }
+
+        .suggestion-item {
+            padding: 12px 15px; border-bottom: 1px solid #f1f1f1;
+            cursor: pointer; display: flex; align-items: center;
+        }
+
+        .suggestion-item:hover { background: #fffdf0; }
+        .suggestion-item i { margin-right: 10px; color: #777; font-size: 14px; }
+
+        .ride-options { display: flex; gap: 12px; margin: 20px 0; }
+        .v-card {
+            flex: 1; border: 2px solid #eee; border-radius: 15px;
+            padding: 12px; text-align: center; cursor: pointer; transition: 0.3s;
+        }
+        .v-card.active { border-color: var(--primary); background: #fffdf0; }
+        .v-card i { font-size: 24px; margin-bottom: 5px; display: block; }
+        .v-card span { font-size: 12px; font-weight: 600; }
+        .v-card .price { display: block; color: #27ae60; font-weight: 700; font-size: 16px; }
+
+        .btn-confirm {
+            width: 100%; background: var(--dark); color: var(--primary);
+            border: none; padding: 16px; border-radius: 15px;
+            font-weight: 700; font-size: 16px; letter-spacing: 1px;
+        }
+
+        .gps-btn {
+            position: absolute; right: 20px; top: -75px;
+            background: white; width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            color: #2e86de; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Map Center Marker -->
+    <div class="center-pin">
+        <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" width="45" alt="Pin">
+    </div>
+
+    <div id="map"></div>
+
+    <div class="bottom-sheet">
+        <div class="gps-btn" onclick="autoLocate()">
+            <i class="fa-solid fa-location-crosshairs"></i>
+        </div>
+
+        <div class="input-container">
+            <div class="input-box">
+                <i class="fa-solid fa-circle" style="color: #27ae60; font-size: 8px;"></i>
+                <input type="text" id="pickupAddr" placeholder="Detecting Pickup..." readonly>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-box">
+                <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
+                <input type="text" id="destInput" placeholder="Kahan jana hai? (Ladnu/Bidasar)" oninput="searchLocation(this.value)">
+            </div>
+            <!-- Suggestions List -->
+            <div class="suggestions" id="suggestionBox"></div>
+        </div>
+
+        <div class="ride-options">
+            <div class="v-card active" id="bike" onclick="selectVeh('bike')">
+                <i class="fa-solid fa-motorcycle"></i>
+                <span>BIKE</span>
+                <span class="price" id="bPrice">₹--</span>
+            </div>
+            <div class="v-card" id="car" onclick="selectVeh('car')">
+                <i class="fa-solid fa-car"></i>
+                <span>CAR / TAXI</span>
+                <span class="price" id="cPrice">₹--</span>
+            </div>
+        </div>
+
+        <button class="btn-confirm" onclick="startBooking()">CONFIRM BOOKING</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Ladnu & Bidasar Famous Locations List
+        const ladnuLocations = [
+            "Jain Vishva Bharati University, Ladnu",
+            "Ladnu Railway Station",
+            "Ladnu Bus Stand",
+            "Current Balaji Temple, Ladnu",
+            "Umarami Chowk, Ladnu",
+            "Phulera Stand, Ladnu",
+            "Chordiya Chowk, Bidasar",
+            "Bidasar Bus Stand",
+            "Station Road, Ladnu",
+            "Government Hospital, Ladnu",
+            "Garh (Fort), Ladnu",
+            "Panna Lal Market, Ladnu",
+            "Chaudhary Petrol Pump, Ladnu",
+            "Shree Digambar Jain Bada Mandir, Ladnu",
+            "Suvratnath Jain Temple, Bidasar",
+            "Main Market, Bidasar",
+            "Subhash Chowk, Bidasar"
+        ];
+
+        var map = L.map('map', { zoomControl: false }).setView([27.6534, 74.3892], 15);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // Map movement sets pickup address
+        map.on('moveend', function() {
+            var c = map.getCenter();
+            fetchAddr(c.lat, c.lng);
+        });
+
+        function autoLocate() {
+            map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true});
+        }
+
+        map.on('locationfound', function(e) { fetchAddr(e.latlng.lat, e.latlng.lng); });
+        map.on('locationerror', function() { map.setView([27.6534, 74.3892], 15); fetchAddr(27.6534, 74.3892); });
+
+        function fetchAddr(lat, lng) {
+            document.getElementById('pickupAddr').value = "Locating...";
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    let a = data.address;
+                    let name = a.road || a.suburb || a.village || a.town || "Ladnu Area";
+                    document.getElementById('pickupAddr').value = name + ", " + (a.postcode || "341306");
+                });
+        }
+
+        // --- Suggestion Logic ---
+        function searchLocation(query) {
+            let box = document.getElementById('suggestionBox');
+            box.innerHTML = "";
+            if(query.length < 1) { box.style.display = "none"; return; }
+
+            let filtered = ladnuLocations.filter(loc => loc.toLowerCase().includes(query.toLowerCase()));
+            
+            if(filtered.length > 0) {
+                box.style.display = "block";
+                filtered.forEach(loc => {
+                    let div = document.createElement('div');
+                    div.className = "suggestion-item";
+                    div.innerHTML = `<i class="fa-solid fa-location-arrow"></i> ${loc}`;
+                    div.onclick = function() {
+                        document.getElementById('destInput').value = loc;
+                        box.style.display = "none";
+                        calculateFare();
+                    };
+                    box.appendChild(div);
+                });
+            } else {
+                box.style.display = "none";
+            }
+        }
+
+        function calculateFare() {
+            // Mock Distance (Since real API is paid, we use random 2-7 KM)
+            let dist = Math.floor(Math.random() * 6) + 2;
+            document.getElementById('bPrice').innerText = '₹' + (dist * 9 + 10);
+            document.getElementById('cPrice').innerText = '₹' + (dist * 18 + 50);
+        }
+
+        function selectVeh(type) {
+            document.querySelectorAll('.v-card').forEach(v => v.classList.remove('active'));
+            document.getElementById(type).classList.add('active');
+        }
+
+        function startBooking() {
+            if(!document.getElementById('destInput').value) return alert("Please select destination!");
+            alert("Booking Confirmed! Finding nearest rider in Ladnu/Bidasar area...");
+        }
+
+        window.onload = autoLocate;
+    </script>
+</body>
+</html>
